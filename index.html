@@ -1,1 +1,248 @@
-<!DOCTYPE html><html><head><title>My Site</title></head><body><h1>Welcome</h1></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Arabic Letter Egg Catch Game</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #dbe8d2;
+    }
+    #home, #game {
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #home {
+      display: flex;
+      background: #f7fdf3;
+    }
+    label, select, input[type=range], button {
+      font-size: 18px;
+      margin: 10px;
+    }
+    #game {
+      position: relative;
+    }
+    .egg {
+      position: absolute;
+      top: -100px;
+      width: 60px;
+      height: 80px;
+      border-radius: 50% 50% 45% 45%;
+      background: #f0e5cf;
+      color: #2e2e2e;
+      text-align: center;
+      font-size: 36px;
+      line-height: 80px;
+      animation: fall linear;
+      cursor: pointer;
+    }
+    @keyframes fall {
+      0%   { top: -100px; transform: rotate(0deg); }
+      25%  { transform: rotate(5deg); }
+      50%  { transform: rotate(-5deg); }
+      75%  { transform: rotate(3deg); }
+      100% { top: 100vh; transform: rotate(0deg); }
+    }
+    .egg.correct { animation: sparkle 0.5s ease-out; }
+    .egg.wrong { animation: crack 0.4s forwards; }
+    @keyframes sparkle {
+      0% { box-shadow: 0 0 5px #fff; transform: scale(1); }
+      50% { box-shadow: 0 0 20px #00ffcc; transform: scale(1.2); }
+      100% { box-shadow: 0 0 5px #fff; transform: scale(1); }
+    }
+    @keyframes crack {
+      0% { transform: rotate(0deg) scale(1); opacity: 1; }
+      100% { transform: rotate(20deg) scale(0.5); opacity: 0; }
+    }
+    .egg.powerup {
+      background: gold;
+      color: black;
+      border: 2px solid orange;
+      box-shadow: 0 0 20px gold;
+    }
+    #basket, #wrong-box, #lives, #level, #back {
+      position: absolute;
+      background: #fff3;
+      padding: 10px;
+      font-size: 20px;
+      border-radius: 10px;
+    }
+    #basket { bottom: 10px; left: 10px; }
+    #wrong-box { bottom: 10px; right: 10px; }
+    #lives { top: 10px; right: 10px; }
+    #level { top: 10px; left: 10px; }
+    #back { top: 10px; left: 50%; transform: translateX(-50%); }
+  </style>
+</head>
+<body>
+  <div id="home">
+    <h2>Start Arabic Egg Game</h2>
+    <label>Choose Level:
+      <select id="start-level">
+        <option value="1">Level 1</option>
+        <option value="2">Level 2</option>
+        <option value="3">Level 3</option>
+        <option value="4">Level 4</option>
+        <option value="5">Level 5</option>
+        <option value="6">Level 6</option>
+        <option value="7">Level 7</option>
+        <option value="8">Level 8</option>
+        <option value="9">Level 9</option>
+        <option value="10">Level 10</option>
+      </select>
+    </label>
+    <label>Correct Letter Frequency: <span id="freq-display">60%</span>
+      <input type="range" id="freq-slider" min="30" max="90" value="60">
+    </label>
+    <label>
+      <input type="checkbox" id="golden-toggle" checked>
+      Enable Golden Eggs
+    </label>
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <div id="game">
+    <div id="basket">Basket: </div>
+    <div id="wrong-box">Wrong: <span id="wrong-count">0</span></div>
+    <div id="lives">❤️❤️❤️❤️❤️❤️❤️</div>
+    <div id="level">Level: 1</div>
+    <div id="back"><button onclick="goHome()">⬅️ Back</button></div>
+  </div>
+
+  <script>
+    const arabicLetters = ['ا','ب','ت','ث','ج','ح','خ','د','ذ','ر','ز','س','ش','ص','ض','ط','ظ','ع','غ','ف','ق','ك','ل','م','ن','ه','و','ي'];
+
+    let home = document.getElementById("home");
+    let game = document.getElementById("game");
+    let basket = document.getElementById("basket");
+    let wrongBox = document.getElementById("wrong-count");
+    let levelDisplay = document.getElementById("level");
+    let livesDisplay = document.getElementById("lives");
+    let freqDisplay = document.getElementById("freq-display");
+
+    let currentLetterIndex = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let lives = 7;
+    let level = 1;
+    let correctFrequency = 0.6;
+    let goldenEnabled = true;
+
+    freqSlider.oninput = () => {
+      freqDisplay.innerText = freqSlider.value + "%";
+    }
+
+    function updateLivesDisplay() {
+      livesDisplay.innerText = '❤️'.repeat(lives) + '🤍'.repeat(7 - lives);
+    }
+
+    function updateLevelDisplay() {
+      levelDisplay.innerText = `Level: ${level}`;
+    }
+
+    function gameOver() {
+      alert("Game Over!");
+      location.reload();
+    }
+
+    function getEggFallDuration() {
+      return Math.max(2, 6 - (level - 1));
+    }
+
+    function createEgg() {
+      const egg = document.createElement('div');
+      egg.classList.add('egg');
+
+      if (goldenEnabled && Math.random() < 0.1) {
+        egg.innerText = '✨';
+        egg.classList.add('powerup');
+      } else {
+        const chance = Math.random();
+        if (chance < correctFrequency) {
+          egg.innerText = arabicLetters[currentLetterIndex];
+        } else {
+          let randomIndex;
+          do {
+            randomIndex = Math.floor(Math.random() * arabicLetters.length);
+          } while (randomIndex === currentLetterIndex);
+          egg.innerText = arabicLetters[randomIndex];
+        }
+      }
+
+      egg.style.left = `${Math.random() * 90}%`;
+      egg.style.animationDuration = `${getEggFallDuration()}s`;
+
+      egg.addEventListener('click', () => {
+        if (egg.classList.contains('powerup')) {
+          activateSlowMode();
+          egg.remove();
+          return;
+        }
+
+        if (egg.innerText === arabicLetters[currentLetterIndex]) {
+          egg.classList.add('correct');
+          basket.innerText += egg.innerText;
+          currentLetterIndex++;
+          correctCount++;
+          if (correctCount % 5 === 0) {
+            level++;
+            updateLevelDisplay();
+          }
+          if (currentLetterIndex === arabicLetters.length) {
+            alert("Congratulations! You caught all letters.");
+            location.reload();
+          }
+        } else {
+          egg.classList.add('wrong');
+          wrongCount++;
+          wrongBox.innerText = wrongCount;
+          lives--;
+          updateLivesDisplay();
+          if (lives === 0) gameOver();
+        }
+        setTimeout(() => egg.remove(), 500);
+      });
+
+      game.appendChild(egg);
+    }
+
+    function activateSlowMode() {
+      document.querySelectorAll('.egg').forEach(egg => {
+        egg.style.animationDuration = "10s";
+      });
+      setTimeout(() => {
+        document.querySelectorAll('.egg').forEach(egg => {
+          egg.style.animationDuration = `${getEggFallDuration()}s`;
+        });
+      }, 5000);
+    }
+
+    let eggInterval;
+
+    function startGame() {
+      level = parseInt(document.getElementById("start-level").value);
+      correctFrequency = parseInt(freqSlider.value) / 100;
+      goldenEnabled = document.getElementById("golden-toggle").checked;
+      home.style.display = "none";
+      game.style.display = "block";
+      updateLevelDisplay();
+      updateLivesDisplay();
+      eggInterval = setInterval(createEgg, 1000);
+    }
+
+    function goHome() {
+      clearInterval(eggInterval);
+      location.reload();
+    }
+  </script>
+</body>
+</html>
+
